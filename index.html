@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Planning rochepierre</title>
+
+  <style>
+    :root{
+      --text:#2b142f;
+      --muted:#6a4c70;
+      --card:rgba(255,255,255,.78);
+      --card2:rgba(255,255,255,.55);
+      --border:rgba(122,31,109,.18);
+      --accent:#7a1f6d;
+      --accent2:#c85bbf;
+      --danger:#d64242;
+      --ok:#248a55;
+      --shadow:0 20px 60px rgba(66,26,70,.16);
+      --font:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:var(--font);
+      color:var(--text);
+      background:
+        radial-gradient(900px 600px at 20% 10%, #ffd3e8 0%, transparent 55%),
+        radial-gradient(800px 560px at 90% 20%, #dac7ff 0%, transparent 55%),
+        radial-gradient(700px 500px at 45% 90%, #ffdfc9 0%, transparent 60%),
+        linear-gradient(135deg,#fff7fb,#f6efff 48%,#fff2e8);
+      padding:26px;
+    }
+
+    .page{max-width:1280px;margin:0 auto;}
+    header{text-align:center;margin:18px 0 26px;}
+
+    h1{
+      margin:0;
+      font-size:clamp(2rem,5vw,4.2rem);
+      letter-spacing:-.06em;
+      line-height:.95;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns:1.25fr .95fr;
+      gap:22px;
+      align-items:start;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(14px);
+    }
+
+    .calendar-card{padding:22px}
+    .form-card{padding:22px;position:sticky;top:20px}
+
+    .calendar-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      margin-bottom:18px;
+    }
+
+    .month-title{
+      font-size:1.35rem;
+      font-weight:800;
+      text-transform:capitalize;
+    }
+
+    button{
+      border:0;
+      cursor:pointer;
+      font-family:inherit;
+      font-weight:800;
+      border-radius:999px;
+      transition:transform .15s ease, opacity .15s ease, box-shadow .15s ease;
+    }
+
+    button:hover{transform:translateY(-1px)}
+    button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+    .nav-btn{
+      width:44px;
+      height:44px;
+      background:#fff;
+      color:var(--accent);
+      border:1px solid var(--border);
+      box-shadow:0 8px 20px rgba(66,26,70,.08);
+      font-size:1.1rem;
+    }
+
+    .days-name,.calendar-grid{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:10px;
+    }
+
+    .days-name div{
+      text-align:center;
+      color:var(--muted);
+      font-weight:800;
+      font-size:.86rem;
+      padding:6px 0;
+    }
+
+    .day{
+      min-height:145px;
+      border-radius:22px;
+      background:var(--card2);
+      border:1px solid rgba(122,31,109,.12);
+      padding:12px;
+      text-align:left;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;
+      gap:8px;
+    }
+
+    .day.empty{opacity:.35;pointer-events:none}
+
+    .day-number{
+      font-size:1.25rem;
+      font-weight:900;
+    }
+
+    .badge{
+      display:inline-flex;
+      width:max-content;
+      max-width:100%;
+      padding:8px 11px;
+      border-radius:999px;
+      font-size:.9rem;
+      font-weight:900;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .calendar-names{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      margin-top:2px;
+      width:100%;
+    }
+
+    .calendar-name{
+      display:block;
+      width:100%;
+      color:var(--text);
+      font-size:.82rem;
+      font-weight:800;
+      line-height:1.25;
+      background:rgba(255,255,255,.7);
+      border:1px solid rgba(122,31,109,.12);
+      border-radius:10px;
+      padding:4px 6px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .free .badge{
+      background:rgba(36,138,85,.12);
+      color:var(--ok);
+    }
+
+    .reserved{
+      background:rgba(255,255,255,.62);
+      border-color:rgba(214,66,66,.26);
+    }
+
+    .reserved .badge{
+      background:rgba(214,66,66,.13);
+      color:var(--danger);
+    }
+
+    .past{
+      opacity:.45;
+      filter:grayscale(.2);
+    }
+
+    .selected{
+      outline:3px solid rgba(200,91,191,.38);
+      box-shadow:0 0 0 6px rgba(200,91,191,.12);
+    }
+
+    .form-card h2{
+      margin:0 0 8px;
+      font-size:1.5rem;
+    }
+
+    .selected-date{
+      margin:0 0 18px;
+      color:var(--muted);
+      line-height:1.5;
+      min-height:24px;
+    }
+
+    label{
+      display:block;
+      font-weight:800;
+      margin:14px 0 7px;
+    }
+
+    input,textarea{
+      width:100%;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.82);
+      border-radius:18px;
+      padding:13px 14px;
+      color:var(--text);
+      font:inherit;
+      outline:none;
+    }
+
+    textarea{
+      resize:vertical;
+      min-height:90px;
+    }
+
+    input:focus,textarea:focus{
+      border-color:rgba(122,31,109,.42);
+      box-shadow:0 0 0 4px rgba(200,91,191,.14);
+    }
+
+    .primary-btn{
+      width:100%;
+      margin-top:18px;
+      padding:14px 18px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:white;
+      box-shadow:0 14px 30px rgba(122,31,109,.22);
+      font-size:1rem;
+    }
+
+    .delete-btn{
+      width:100%;
+      margin-top:10px;
+      padding:12px 18px;
+      background:rgba(214,66,66,.12);
+      color:var(--danger);
+      border:1px solid rgba(214,66,66,.2);
+    }
+
+    .status{
+      margin-top:14px;
+      min-height:24px;
+      color:var(--muted);
+      line-height:1.45;
+      font-weight:700;
+    }
+
+    .reservation-box{
+      margin-top:18px;
+      padding:14px;
+      border-radius:20px;
+      background:rgba(255,255,255,.58);
+      border:1px solid var(--border);
+      display:none;
+    }
+
+    .reservation-box strong{
+      display:block;
+      margin-bottom:12px;
+    }
+
+    .reservation-list{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .reservation-item{
+      width:100%;
+      padding:14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.78);
+      border:1px solid rgba(122,31,109,.16);
+      text-align:left;
+    }
+
+    .reservation-name{
+      display:block;
+      font-size:1rem;
+      font-weight:900;
+      color:var(--text);
+      line-height:1.35;
+      margin-bottom:8px;
+      white-space:normal;
+      overflow-wrap:anywhere;
+      word-break:normal;
+    }
+
+    .reservation-message{
+      display:block;
+      color:var(--muted);
+      line-height:1.5;
+      font-weight:600;
+      white-space:pre-wrap;
+      overflow-wrap:anywhere;
+      word-break:normal;
+    }
+
+    .single-delete-btn{
+      width:auto;
+      margin-top:12px;
+      padding:10px 14px;
+      background:rgba(214,66,66,.12);
+      color:var(--danger);
+      border:1px solid rgba(214,66,66,.2);
+      font-size:.88rem;
+    }
+
+    @media(max-width:980px){
+      body{padding:16px}
+
+      .layout{
+        grid-template-columns:1fr;
+      }
+
+      .form-card{
+        position:static;
+      }
+
+      .day{
+        min-height:120px;
+        border-radius:18px;
+        padding:10px;
+      }
+
+      .badge{
+        font-size:.78rem;
+        padding:6px 9px;
+      }
+
+      .calendar-name{
+        font-size:.76rem;
+      }
+    }
+
+    @media(max-width:560px){
+      .days-name,.calendar-grid{
+        gap:6px;
+      }
+
+      .day{
+        min-height:105px;
+      }
+
+      .day-number{
+        font-size:1rem;
+      }
+
+      .badge{
+        font-size:.7rem;
+        padding:5px 7px;
+      }
+
+      .calendar-name{
+        font-size:.68rem;
+        padding:3px 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Planning rochepierre</h1>
+    </header>
+
+    <section class="layout">
+      <div class="card calendar-card">
+        <div class="calendar-head">
+          <button class="nav-btn" id="prevMonth" aria-label="Mois précédent" type="button">‹</button>
+          <div class="month-title" id="monthTitle"></div>
+          <button class="nav-btn" id="nextMonth" aria-label="Mois suivant" type="button">›</button>
+        </div>
+
+        <div class="days-name">
+          <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
+        </div>
+
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+
+      <aside class="card form-card">
+        <h2>Réserver une date</h2>
+        <p class="selected-date" id="selectedDateText"></p>
+
+        <form id="reservationForm">
+          <label for="name">Nom</label>
+          <input id="name" type="text" required />
+
+          <label for="message">Message</label>
+          <textarea id="message"></textarea>
+
+          <button class="primary-btn" id="reserveBtn" type="submit" disabled>
+            Réserver cette date
+          </button>
+        </form>
+
+        <div class="reservation-box" id="reservationBox">
+          <strong id="reservationBoxTitle">Réservations sur cette date</strong>
+          <div class="reservation-list" id="reservationList"></div>
+        </div>
+
+        <div class="status" id="status"></div>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+
+    import {
+      getFirestore,
+      collection,
+      doc,
+      addDoc,
+      deleteDoc,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGkGCb0SyTlIti_8CkGqkrsZ8HBGsWnGs",
+      authDomain: "planning-rochepierre.firebaseapp.com",
+      projectId: "planning-rochepierre",
+      storageBucket: "planning-rochepierre.firebasestorage.app",
+      messagingSenderId: "764393451281",
+      appId: "1:764393451281:web:bb6d959e7d8479a40126b0",
+      measurementId: "G-77DD2P2KYZ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const reservationsRef = collection(db, "reservations");
+
+    const monthTitle = document.getElementById("monthTitle");
+    const calendarGrid = document.getElementById("calendarGrid");
+    const prevMonth = document.getElementById("prevMonth");
+    const nextMonth = document.getElementById("nextMonth");
+    const selectedDateText = document.getElementById("selectedDateText");
+    const reservationForm = document.getElementById("reservationForm");
+    const reserveBtn = document.getElementById("reserveBtn");
+    const statusEl = document.getElementById("status");
+    const reservationBox = document.getElementById("reservationBox");
+    const reservationList = document.getElementById("reservationList");
+    const reservationBoxTitle = document.getElementById("reservationBoxTitle");
+    const nameInput = document.getElementById("name");
+    const messageInput = document.getElementById("message");
+
+    let currentDate = new Date();
+    let selectedDate = null;
+    let reservations = {};
+
+    function dateId(date){
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+
+      return `${year}-${month}-${day}`;
+    }
+
+    function prettyDate(id){
+      const parts = id.split("-").map(Number);
+
+      const date = new Date(
+        parts[0],
+        parts[1] - 1,
+        parts[2]
+      );
+
+      return date.toLocaleDateString("fr-FR", {
+        weekday:"long",
+        day:"numeric",
+        month:"long",
+        year:"numeric"
+      });
+    }
+
+    function isPast(date){
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      const compare = new Date(date);
+      compare.setHours(0,0,0,0);
+
+      return compare < today;
+    }
+
+    function reservationLabel(count){
+      if(count === 0) return "Disponible";
+      if(count === 1) return "1 réservation";
+
+      return `${count} réservations`;
+    }
+
+    function renderCalendar(){
+      calendarGrid.innerHTML = "";
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      const totalDays = lastDay.getDate();
+      const startIndex = (firstDay.getDay() + 6) % 7;
+
+      monthTitle.textContent = firstDay.toLocaleDateString("fr-FR", {
+        month:"long",
+        year:"numeric"
+      });
+
+      for(let i = 0; i < startIndex; i++){
+        const empty = document.createElement("button");
+
+        empty.className = "day empty";
+        empty.type = "button";
+        empty.disabled = true;
+
+        calendarGrid.appendChild(empty);
+      }
+
+      for(let day = 1; day <= totalDays; day++){
+        const date = new Date(year, month, day);
+
+        const id = dateId(date);
+        const dayReservations = reservations[id] || [];
+        const count = dayReservations.length;
+
+        const past = isPast(date);
+
+        const btn = document.createElement("button");
+
+        btn.type = "button";
+
+        btn.className = `
+          day
+          ${count > 0 ? "reserved" : "free"}
+          ${past ? "past" : ""}
+          ${selectedDate === id ? "selected" : ""}
+        `;
+
+        btn.disabled = past;
+
+        const numberSpan = document.createElement("span");
+        numberSpan.className = "day-number";
+        numberSpan.textContent = String(day);
+
+        const badgeSpan = document.createElement("span");
+        badgeSpan.className = "badge";
+        badgeSpan.textContent = reservationLabel(count);
+
+        btn.appendChild(numberSpan);
+        btn.appendChild(badgeSpan);
+
+        if(dayReservations.length > 0){
+          const namesBox = document.createElement("span");
+          namesBox.className = "calendar-names";
+
+          dayReservations.slice(0, 3).forEach((reservation) => {
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "calendar-name";
+            nameSpan.textContent = reservation.name || "Nom non indiqué";
+            namesBox.appendChild(nameSpan);
+          });
+
+          if(dayReservations.length > 3){
+            const moreSpan = document.createElement("span");
+            moreSpan.className = "calendar-name";
+            moreSpan.textContent = `+ ${dayReservations.length - 3} autre(s)`;
+            namesBox.appendChild(moreSpan);
+          }
+
+          btn.appendChild(namesBox);
+        }
+
+        btn.addEventListener("click", () => selectDate(id));
+
+        calendarGrid.appendChild(btn);
+      }
+    }
+
+    function renderReservationList(dayReservations){
+      reservationList.innerHTML = "";
+
+      dayReservations.forEach((reservation, index) => {
+        const item = document.createElement("div");
+        item.className = "reservation-item";
+
+        const name = document.createElement("div");
+        name.className = "reservation-name";
+        name.textContent = `${index + 1}. ${reservation.name || "Nom non indiqué"}`;
+
+        const message = document.createElement("div");
+        message.className = "reservation-message";
+        message.textContent = reservation.message
+          ? reservation.message
+          : "Aucun message.";
+
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "single-delete-btn";
+        deleteButton.type = "button";
+        deleteButton.textContent = "Supprimer cette réservation";
+
+        deleteButton.addEventListener("click", async () => {
+          const ok = confirm(
+            `Supprimer la réservation de ${reservation.name || "cette personne"} ?`
+          );
+
+          if(!ok) return;
+
+          statusEl.textContent = "Suppression en cours...";
+
+          try{
+            await deleteDoc(doc(db, "reservations", reservation.id));
+            statusEl.textContent = "Réservation supprimée.";
+          }catch(error){
+            console.error(error);
+            statusEl.textContent = "Erreur : suppression impossible.";
+          }
+        });
+
+        item.appendChild(name);
+        item.appendChild(message);
+        item.appendChild(deleteButton);
+
+        reservationList.appendChild(item);
+      });
+    }
+
+    function selectDate(id){
+      selectedDate = id;
+
+      const dayReservations = reservations[id] || [];
+
+      selectedDateText.textContent =
+        `Date sélectionnée : ${prettyDate(id)}`;
+
+      statusEl.textContent = "";
+
+      reserveBtn.disabled = false;
+
+      if(dayReservations.length > 0){
+        reservationBox.style.display = "block";
+
+        reservationBoxTitle.textContent =
+          reservationLabel(dayReservations.length)
+          + " sur cette date";
+
+        renderReservationList(dayReservations);
+      }else{
+        reservationBox.style.display = "none";
+        reservationList.innerHTML = "";
+      }
+
+      renderCalendar();
+    }
+
+    reservationForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      if(!selectedDate){
+        statusEl.textContent = "Choisis d’abord une date.";
+        return;
+      }
+
+      reserveBtn.disabled = true;
+      statusEl.textContent = "Réservation en cours...";
+
+      try{
+        await addDoc(reservationsRef, {
+          date: selectedDate,
+          name: nameInput.value.trim(),
+          message: messageInput.value.trim(),
+          createdAt: serverTimestamp()
+        });
+
+        reservationForm.reset();
+
+        statusEl.textContent = "Réservation enregistrée !";
+
+        reserveBtn.disabled = false;
+      }catch(error){
+        console.error(error);
+
+        statusEl.textContent =
+          "Erreur : impossible d’enregistrer la réservation.";
+
+        reserveBtn.disabled = false;
+      }
+    });
+
+    prevMonth.addEventListener("click", () => {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      renderCalendar();
+    });
+
+    nextMonth.addEventListener("click", () => {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      renderCalendar();
+    });
+
+    onSnapshot(reservationsRef, (snapshot) => {
+      reservations = {};
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const reservationDate = data.date;
+
+        if(!reservationDate) return;
+
+        if(!reservations[reservationDate]){
+          reservations[reservationDate] = [];
+        }
+
+        reservations[reservationDate].push({
+          id: docSnap.id,
+          ...data
+        });
+      });
+
+      Object.keys(reservations).forEach((date) => {
+        reservations[date].sort((a, b) => {
+          const nameA = a.name || "";
+          const nameB = b.name || "";
+
+          return nameA.localeCompare(nameB, "fr");
+        });
+      });
+
+      if(selectedDate){
+        const selected = selectedDate;
+        selectedDate = null;
+        selectDate(selected);
+      }else{
+        renderCalendar();
+      }
+    }, (error) => {
+      console.error(error);
+
+      statusEl.textContent =
+        "Impossible de charger les réservations.";
+
+      renderCalendar();
+    });
+
+    renderCalendar();
+  </script>
+</body>
+</html>
